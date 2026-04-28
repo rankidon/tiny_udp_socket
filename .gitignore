@@ -1,0 +1,17 @@
+# 编译产物
+test/test_udp_stack
+test/test_rtos_udp_stack
+*.o
+*.out
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Claude
+.claude/
