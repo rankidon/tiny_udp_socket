@@ -1,12 +1,12 @@
 # Tiny UDP Socket Protocol Stack
 
-纯 C 实现的轻量级 UDP/IP 协议栈，面向嵌入式裸机 / RTOS 环境（MIPS Loongson 2K1000）。
+纯 C 实现的轻量级 UDP/IP 协议栈，面向嵌入式裸机 / RTOS 环境。
 
 ## 特性
 
 - **零动态内存分配** — 全部使用静态数组，无 `malloc`
 - **BSD Socket 风格 API** — `tiny_udp_socket` / `bind` / `sendto` / `recvfrom` / `select` / `poll` ...
-- **MIPS 对齐安全** — 逐字节读写，避免非对齐访问陷阱
+- **对齐安全** — 逐字节读写，避免非对齐访问陷阱
 - **双模式运行** — 支持裸机轮询模式和 RTOS 阻塞模式
 - **线程安全** — RTOS 模式下全局互斥锁保护，支持多线程并发收发
 - **阻塞 / 超时 / 非阻塞** — 完整的 `SO_RCVTIMEO`、`O_NONBLOCK`、`select`/`poll` 超时
