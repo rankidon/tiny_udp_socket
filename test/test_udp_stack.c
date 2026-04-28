@@ -303,6 +303,15 @@ static void test_connect_send_recv(void)
 
     ret = tiny_udp_recvfrom(fd_a, rbuf, sizeof(rbuf), 0, NULL, NULL);
     CHECK(ret == 12, "recvfrom failed");
+    {
+        int j;
+        for (j = 0; j < 12; j++) {
+            if (rbuf[j] != (uint8_t)msg2[j]) {
+                FAIL("payload mismatch in connect send->recv");
+                goto done;
+            }
+        }
+    }
     PASS();
 
     TEST("connect mode: recv filters by peer");

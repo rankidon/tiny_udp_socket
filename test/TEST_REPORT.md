@@ -108,7 +108,7 @@ Result: **5/5 passed**
 |---|------|--------|
 | 1 | recvfrom blocks, then woken by incoming data | PASS |
 
-Verifies: thread blocks on recvfrom with empty socket queue, wakes immediately when data arrives via tick processing.
+Verifies: thread blocks on recvfrom with empty socket queue, wakes immediately when data arrives via tick processing. Payload "BLOCKING" verified byte-for-byte.
 
 ### 2.2 recvfrom SO_RCVTIMEO timeout (1 test)
 | # | Test | Result |
@@ -130,7 +130,7 @@ Verifies: select blocks waiting for data on empty sockets, returns 0 on timeout,
 | 4 | concurrent send/recv/tick (20 packets) | PASS |
 
 Verifies: 3 threads (sender, receiver, tick processor) running concurrently with
-global mutex protecting socket array and pool indices. All 20 packets delivered correctly.
+global mutex protecting socket array and pool indices. Each packet carries a unique 4-byte sequence number (0..19). Receiver validates all 20 distinct sequence numbers present with no duplicates; byte-for-byte payload correctness implicitly verified by sequence number integrity.
 
 ### 2.5 Close wakes blocked recvfrom (1 test)
 | # | Test | Result |

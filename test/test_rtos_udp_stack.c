@@ -169,7 +169,16 @@ static void test_blocking_recvfrom(void)
 
     CHECK(ctx.ready == 1, "recvfrom should succeed after data");
     CHECK(ctx.len == 8, "recvfrom length mismatch");
-    CHECK(ctx.buf[0] == 'B', "payload mismatch");
+    {
+        const char *expect = "BLOCKING";
+        int j;
+        for (j = 0; j < 8; j++) {
+            if (ctx.buf[j] != (uint8_t)expect[j]) {
+                FAIL("payload mismatch");
+                goto done;
+            }
+        }
+    }
     PASS();
 
     tiny_udp_close(fd_a);
@@ -266,6 +275,7 @@ typedef struct {
     int     fd_recv;
     int     send_count;
     int     recv_count;
+    uint8_t recv_map[CONCURRENT_COUNT]; /* 0=not received, 1=received */
 } concurrent_ctx_t;
 
 static void *sender_thread(void *arg)
@@ -305,8 +315,10 @@ static void *receiver_thread(void *arg)
         if (ret == 4) {
             uint32_t seq = ((uint32_t)buf[0] << 24) | ((uint32_t)buf[1] << 16) |
                            ((uint32_t)buf[2] << 8)  |  (uint32_t)buf[3];
-            (void)seq;
-            count++;
+            if (seq < CONCURRENT_COUNT && ctx->recv_map[seq] == 0) {
+                ctx->recv_map[seq] = 1;
+                count++;
+            }
         }
     }
     ctx->recv_count = count;
@@ -352,8 +364,9 @@ static void test_concurrent(void)
     ctx.fd_recv = fd_b;
     ctx.send_count = 0;
     ctx.recv_count = 0;
+    { int zi; for (zi = 0; zi < CONCURRENT_COUNT; zi++) ctx.recv_map[zi] = 0; }
 
-    TEST("concurrent send/recv/tick (50 packets)");
+    TEST("concurrent send/recv/tick (20 packets)");
     pthread_create(&t_thr, NULL, tick_thread, NULL);
     pthread_create(&s_thr, NULL, sender_thread, &ctx);
     pthread_create(&r_thr, NULL, receiver_thread, &ctx);
@@ -373,6 +386,15 @@ static void test_concurrent(void)
 
     CHECK(ctx.send_count == CONCURRENT_COUNT, "not all packets sent");
     CHECK(ctx.recv_count == CONCURRENT_COUNT, "not all packets received");
+    {
+        int si;
+        for (si = 0; si < CONCURRENT_COUNT; si++) {
+            if (ctx.recv_map[si] == 0) {
+                FAIL("missing or duplicate sequence number");
+                goto done;
+            }
+        }
+    }
     PASS();
 
     tiny_udp_close(fd_a);
