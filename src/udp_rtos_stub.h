@@ -22,6 +22,36 @@ extern "C" {
 #include <sys/time.h>
 #include <errno.h>
 
+/* ================================================================
+ * 裸机 errno 桥接
+ *
+ * udp_stack.h 的 #ifndef guard 在系统 <errno.h> 已定义宏时自动跳过，
+ * 导致 udp_stack.c（不含系统头文件）使用裸机 errno 值（EAGAIN=11），
+ * 而测试代码（含 <errno.h>）使用系统值（EAGAIN=35）。
+ *
+ * 强制覆盖为裸机值，保证整个进程内一致性。
+ * ================================================================ */
+#ifdef errno
+#undef errno
+#endif
+extern int errno;
+
+/* 覆盖系统 errno 常量到裸机值（与 udp_stack.h 中的定义一致）。
+   注意：ETIMEDOUT 保留系统值（60），udp_rtos_stub.c 用其检查
+   pthread_cond_timedwait 返回值。 */
+#undef EAGAIN
+#define EAGAIN          11
+#undef EWOULDBLOCK
+#define EWOULDBLOCK     11
+#undef EINVAL
+#define EINVAL          22
+#undef ENOMEM
+#define ENOMEM          12
+#undef ENOTCONN
+#define ENOTCONN        107
+#undef EBADF
+#define EBADF           9
+
 /*
  * 互斥锁类型：直接内嵌 pthread_mutex_t
  */

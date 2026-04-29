@@ -1,8 +1,22 @@
 # 编译产物
 test/test_udp_stack
 test/test_rtos_udp_stack
+test/test_wolfssl_types
+test/test_wolfssl_dtls
+test/test_wolfssl_dtls_bm
 *.o
 *.out
+
+# 构建产物
+build/
+
+# 自动生成证书
+test/server-cert.pem
+test/server-key.pem
+test/ca-cert.pem
+
+# wolfSSL 源码（需手动获取）
+wolfssl-5.9.1/
 
 # IDE
 .idea/
@@ -12,6 +26,9 @@ test/test_rtos_udp_stack
 
 # macOS
 .DS_Store
+
+# 备份文件
+*.bak
 
 # Claude
 .claude/

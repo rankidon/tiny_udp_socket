@@ -791,6 +791,18 @@ int tiny_udp_getsockopt(int s, int level, int optname,
             udp_mutex_unlock(&g_mutex);
             return 0;
         }
+        case SO_TYPE: {
+            int val = SOCK_DGRAM;
+            if (!optval || !optlen || *optlen < sizeof(int)) {
+                udp_mutex_unlock(&g_mutex);
+                errno = EINVAL;
+                return -1;
+            }
+            safe_memcpy(optval, &val, sizeof(int));
+            *optlen = sizeof(int);
+            udp_mutex_unlock(&g_mutex);
+            return 0;
+        }
         default:
             udp_mutex_unlock(&g_mutex);
             errno = EOPNOTSUPP;

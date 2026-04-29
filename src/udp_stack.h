@@ -66,18 +66,27 @@ typedef long                    suseconds_t;
 
 /* ================================================================
  * 网络地址结构
+ * 仅当系统未提供时定义（裸机环境），托管环境中跳过以避免
+ * 与系统头文件冲突。
  * ================================================================ */
 
+#if !defined(_NETINET_IN_H_) && !defined(_STRUCT_IN_ADDR)
 struct in_addr {
     uint32_t s_addr;            /* 网络字节序 */
 };
+#define _STRUCT_IN_ADDR
+#endif
 
+#if !defined(_SYS_SOCKET_H_) && !defined(_STRUCT_SOCKADDR)
 struct sockaddr {
     uint8_t     sa_len;         /* 总长度 */
     uint8_t     sa_family;      /* 地址族，AF_INET */
     char        sa_data[14];    /* 地址数据 */
 };
+#define _STRUCT_SOCKADDR
+#endif
 
+#if !defined(_NETINET_IN_H_) && !defined(_STRUCT_SOCKADDR_IN)
 struct sockaddr_in {
     uint8_t     sin_len;        /* sizeof(struct sockaddr_in) */
     uint8_t     sin_family;     /* AF_INET */
@@ -85,6 +94,88 @@ struct sockaddr_in {
     struct in_addr sin_addr;    /* IP 地址，网络字节序 */
     char        sin_zero[8];    /* 填充 */
 };
+#define _STRUCT_SOCKADDR_IN
+#endif
+
+/* ---- IPv6 address structure (for wolfSSL compatibility) ---- */
+
+#if !defined(_NETINET6_IN6_H_) && !defined(_STRUCT_IN6_ADDR)
+struct in6_addr {
+    union {
+        uint8_t  __s6_addr[16];
+        uint16_t __s6_addr16[8];
+        uint32_t __s6_addr32[4];
+    } __in6_u;
+};
+#define _STRUCT_IN6_ADDR
+#endif
+
+/* s6_addr 访问宏：仅在系统未定义时提供 */
+#ifndef s6_addr
+#define s6_addr  __in6_u.__s6_addr
+#endif
+#ifndef s6_addr16
+#define s6_addr16 __in6_u.__s6_addr16
+#endif
+#ifndef s6_addr32
+#define s6_addr32 __in6_u.__s6_addr32
+#endif
+
+#if !defined(_NETINET6_IN6_H_) && !defined(_STRUCT_SOCKADDR_IN6)
+struct sockaddr_in6 {
+    uint8_t         sin6_len;       /* sizeof(struct sockaddr_in6) */
+    uint8_t         sin6_family;    /* AF_INET6 */
+    uint16_t        sin6_port;      /* 端口号，网络字节序 */
+    uint32_t        sin6_flowinfo;  /* flow info */
+    struct in6_addr sin6_addr;      /* IPv6 地址 */
+    uint32_t        sin6_scope_id;  /* scope ID */
+};
+#define _STRUCT_SOCKADDR_IN6
+#endif
+
+#ifndef INET6_ADDRSTRLEN
+#define INET6_ADDRSTRLEN  46
+#endif
+
+/* sockaddr_storage — enough space for both IPv4 and IPv6 */
+#if !defined(_SYS_SOCKET_H_) && !defined(_STRUCT_SOCKADDR_STORAGE)
+struct sockaddr_storage {
+    uint8_t     ss_len;
+    uint8_t     ss_family;
+    char        __ss_pad[126];
+};
+#define _STRUCT_SOCKADDR_STORAGE
+#endif
+
+/* ================================================================
+ * 字节序转换（网络序 = 大端）
+ * 仅在裸机环境（无系统头文件）时定义，托管环境使用系统提供版本。
+ * ================================================================ */
+
+#ifndef htons
+static inline uint16_t htons(uint16_t hostshort)
+{
+    return (uint16_t)((hostshort >> 8) | (hostshort << 8));
+}
+#endif
+
+#ifndef htonl
+static inline uint32_t htonl(uint32_t hostlong)
+{
+    return ((hostlong >> 24) & 0x000000FF) |
+           ((hostlong >>  8) & 0x0000FF00) |
+           ((hostlong <<  8) & 0x00FF0000) |
+           ((hostlong << 24) & 0xFF000000);
+}
+#endif
+
+#ifndef ntohs
+#define ntohs htons
+#endif
+
+#ifndef ntohl
+#define ntohl htonl
+#endif
 
 /* ================================================================
  * select 相关（添加 guard 防止与系统头文件冲突）
@@ -133,86 +224,116 @@ struct pollfd {
  * 协议族 / socket 类型 / 协议
  * ================================================================ */
 
+#ifndef AF_INET
 #define AF_INET         2
+#endif
+#ifndef AF_INET6
+#define AF_INET6        10
+#endif
+#ifndef PF_INET
+#define PF_INET         AF_INET
+#endif
+#ifndef PF_INET6
+#define PF_INET6        AF_INET6
+#endif
+#ifndef SOCK_DGRAM
 #define SOCK_DGRAM      2
+#endif
+#ifndef IPPROTO_UDP
 #define IPPROTO_UDP     17
+#endif
 
 /* ================================================================
  * Socket 选项层级和选项名
  * ================================================================ */
 
+#ifndef SOL_SOCKET
 #define SOL_SOCKET      1
+#endif
+#ifndef SO_BROADCAST
 #define SO_BROADCAST    6
+#endif
+#ifndef SO_RCVTIMEO
 #define SO_RCVTIMEO     20
+#endif
+#ifndef SO_SNDTIMEO
 #define SO_SNDTIMEO     21
+#endif
+#ifndef SO_TYPE
+#define SO_TYPE         17      /* wolfSSL NUCLEUS_PLUS_2_3 兼容值 */
+#endif
 
 /* ================================================================
  * ioctl / fcntl 命令和标志
  * ================================================================ */
 
+#ifndef FIONBIO
 #define FIONBIO         0x5421
+#endif
+#ifndef F_SETFL
 #define F_SETFL         4
+#endif
+#ifndef F_GETFL
 #define F_GETFL         3
+#endif
+#ifndef O_NONBLOCK
 #define O_NONBLOCK      0x800
+#endif
 
 /* ================================================================
  * 地址常量
  * ================================================================ */
 
+#ifndef INADDR_ANY
 #define INADDR_ANY      0x00000000
+#endif
 
 /* ================================================================
  * recvfrom / recv / sendto / send flags
  * ================================================================ */
 
+#ifndef MSG_DONTWAIT
 #define MSG_DONTWAIT    0x40
+#endif
 
 /* ================================================================
  * 错误码
  * ================================================================ */
 
-/* 强制定义我们自己的错误码（覆盖系统头文件以保证一致性） */
-#ifdef EAGAIN
-#undef EAGAIN
-#endif
+/* 错误码：仅在系统未提供时定义（兼容裸机与托管环境） */
+#ifndef EAGAIN
 #define EAGAIN          11
+#endif
+#ifndef EWOULDBLOCK
 #define EWOULDBLOCK     EAGAIN
-#ifdef EBADF
-#undef EBADF
 #endif
+#ifndef EBADF
 #define EBADF           9
-#ifdef EINVAL
-#undef EINVAL
 #endif
+#ifndef EINVAL
 #define EINVAL          22
-#ifdef ENOMEM
-#undef ENOMEM
 #endif
+#ifndef ENOMEM
 #define ENOMEM          12
-#ifdef ENOTCONN
-#undef ENOTCONN
 #endif
+#ifndef ENOTCONN
 #define ENOTCONN        107
-#ifdef EOPNOTSUPP
-#undef EOPNOTSUPP
 #endif
+#ifndef EOPNOTSUPP
 #define EOPNOTSUPP      95
-#ifdef EADDRINUSE
-#undef EADDRINUSE
 #endif
+#ifndef EADDRINUSE
 #define EADDRINUSE      98
-#ifdef EISCONN
-#undef EISCONN
 #endif
+#ifndef EISCONN
 #define EISCONN         106
-#ifdef ENOTSOCK
-#undef ENOTSOCK
 #endif
+#ifndef ENOTSOCK
 #define ENOTSOCK        88
-#ifdef EMSGSIZE
-#undef EMSGSIZE
 #endif
+#ifndef EMSGSIZE
 #define EMSGSIZE        90
+#endif
 
 /* ================================================================
  * IP 协议号
@@ -254,14 +375,14 @@ extern volatile uint32_t g_tx_read_idx;
 /* ================================================================
  * 全局错误码
  *
- * 注意：托管环境中 errno 可能是宏（如 (*__error())），
- * 必须先 undef 以确保引用我们自己的全局 int 变量。
+ * 托管环境（有系统 <errno.h>）中 errno 通常是宏（如 (*__error())），
+ * 此时直接使用系统 errno，不做替换。
+ * 裸机环境（无系统 errno）中提供自己的全局 int 变量。
  * ================================================================ */
 
-#ifdef errno
-#undef errno
-#endif
+#ifndef errno
 extern int errno;
+#endif
 
 /* ================================================================
  * Socket 状态
